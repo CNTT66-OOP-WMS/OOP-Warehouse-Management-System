@@ -1,0 +1,5 @@
+/config/.env
+/database/wms.json
+/database/wms.json.tmp
+/backend/*.o
+/backend/*.exe
