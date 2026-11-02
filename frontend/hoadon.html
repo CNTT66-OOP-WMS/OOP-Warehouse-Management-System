@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hóa đơn & đơn hàng - WMS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #modal-in-hoadon, #modal-in-hoadon * { visibility: visible; }
+            #modal-in-hoadon { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar no-print">
+        <a href="index.html" class="nav-brand">
+            📦 WMS
+        </a>
+        <ul class="nav-menu" id="nav-menu-container"></ul>
+        <div class="nav-auth" id="nav-auth-container"></div>
+    </header>
+
+    <div class="container no-print">
+        <!-- Banner Observer Alert -->
+        <div id="observer-alert-banner" style="display: none;"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title" id="orders-title">🧾 Quản lý hóa đơn & đơn hàng</h2>
+                    <p id="orders-subtitle" style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">
+                        Áp dụng <strong>Command Pattern</strong>: hủy đơn an toàn & hoàn tác (Undo) tránh cộng tồn kho 2 lần &bull; in hóa đơn VAT
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="undo-command-button" class="btn btn-warning" onclick="hoanTacLenhCommand()">
+                        ↩️ Hoàn tác gần nhất (Command Undo)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bang danh sach hoa don -->
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr id="orders-table-header">
+                            <th>Mã HĐ</th>
+                            <th>Ngày tạo</th>
+                            <th>Khách hàng</th>
+                            <th>Tiền gốc</th>
+                            <th>Khuyến mãi (Strategy)</th>
+                            <th>Thuế (Strategy)</th>
+                            <th>Tổng thanh toán</th>
+                            <th>Trạng thái đơn</th>
+                            <th>Thanh toán</th>
+                            <th style="width: 140px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bang-hoa-don-body">
+                        <tr><td colspan="10" style="text-align: center;">Đang tải danh sách hóa đơn...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xem & In Hoa Don Chi Tiet -->
+    <div id="modal-in-hoadon" class="modal-overlay">
+        <div class="modal-content" style="max-width: 650px; background: #fff; padding: 2.5rem; border: 2px solid var(--primary-border);">
+            <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <h2 style="color: var(--primary-hover); margin-bottom: 4px;">HỆ THỐNG QUẢN LÝ KHO & BÁN HÀNG (WMS)</h2>
+                <h3 style="font-size: 1.3rem; color: var(--text-dark);">HÓA ĐƠN BÁN HÀNG & XUẤT KHO</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Mã đơn: <strong id="in-mahd"></strong> &bull; Ngày: <span id="in-ngay"></span></p>
+            </div>
+
+            <div style="margin-bottom: 1.2rem; font-size: 0.95rem; line-height: 1.6;">
+                <div>Khách hàng: <strong id="in-tenkh"></strong></div>
+                <div>Số điện thoại: <span id="in-sdt"></span></div>
+                <div>Địa chỉ nhận: <span id="in-diachi"></span></div>
+                <div>Phương thức TT: <span id="in-pttt"></span></div>
+            </div>
+
+            <table class="table" style="margin-bottom: 1.2rem;">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>SL</th>
+                        <th>Đơn giá</th>
+                        <th style="text-align: right;">Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody id="in-danhsach-ct"></tbody>
+            </table>
+
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 1rem; font-size: 0.95rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>Tổng tiền hàng:</span>
+                    <strong id="in-tiengoc"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--success);">
+                    <span>Khuyến mãi (Strategy: <span id="in-loaigg"></span>):</span>
+                    <strong id="in-tiengiam"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-muted);">
+                    <span>Thuế GTGT (Strategy: <span id="in-loaithue"></span>):</span>
+                    <strong id="in-tienthue"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-top: 8px;">
+                    <span>TỔNG THANH TOÁN:</span>
+                    <span id="in-tongtien"></span>
+                </div>
+            </div>
+
+            <div class="no-print" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem;">
+                <button class="btn btn-outline" onclick="dongModalIn()">Đóng</button>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ In hóa đơn</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        Auth.kiemTraQuyen(['ADMIN', 'BAN_HANG', 'KHACH_HANG']);
+        let toanBoHoaDon = [];
+
+        function laKhachHang() {
+            const user = Auth.layNguoiDungHienTai();
+            return !!user && user.vaiTro === 'KHACH_HANG';
+        }
+
+        function trangThaiVanChuyen(hd) {
+            const nhan = {
+                CHO_XAC_NHAN: 'Chờ cửa hàng xác nhận',
+                DA_XAC_NHAN: 'Đã xác nhận, chờ bàn giao vận chuyển',
+                DANG_GIAO: 'Đang vận chuyển',
+                DA_GIAO: 'Đã giao hàng',
+                DA_HUY: 'Đơn đã hủy',
+                DA_TRA_HANG: 'Đã trả hàng'
+            };
+            return nhan[hd.trangThaiDon] || hd.trangThaiDon;
+        }
+
+        function cauHinhTrangDonHang() {
+            if (!laKhachHang()) return;
+            document.title = 'Đơn hàng của tôi - WMS';
+            document.getElementById('orders-title').innerText = 'Đơn hàng của tôi';
+            document.getElementById('orders-subtitle').innerText = 'Xem sản phẩm đã mua và trạng thái giao hàng của từng đơn.';
+            document.getElementById('undo-command-button').style.display = 'none';
+            document.getElementById('observer-alert-banner').style.display = 'none';
+            document.getElementById('orders-table-header').innerHTML = `
+                <th>Mã đơn</th><th>Ngày đặt</th><th>Sản phẩm đã mua</th>
+                <th>Tổng tiền</th><th>Vận chuyển</th><th>Chi tiết</th>`;
+        }
+
+        async function taiDanhSachHoaDon() {
+            try {
+                const res = await fetch('/api/hoa-don', {
+                    headers: { 'Authorization': `Bearer ${Auth.layToken()}` }
+                });
+                const data = await res.json();
+                const tbody = document.getElementById('bang-hoa-don-body');
+                const user = Auth.layNguoiDungHienTai();
+                cauHinhTrangDonHang();
+                const laKhach = user && user.vaiTro === 'KHACH_HANG';
+                const soCot = laKhach ? 6 : 10;
+
+                if (data.thanhCong && data.danhSach.length > 0) {
+                    const laKhach = user && user.vaiTro === 'KHACH_HANG';
+                    toanBoHoaDon = laKhach
+                        ? data.danhSach.filter(x => x.maKhachHang === user.maNguoiDung)
+                        : data.danhSach;
+                    const listHienThi = toanBoHoaDon;
+
+                    if (listHienThi.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${soCot}" style="text-align: center;">Bạn chưa có đơn hàng nào!</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = listHienThi.map(hd => {
+                        let badgeTrangThai = '';
+                        if (hd.trangThaiDon === 'CHO_XAC_NHAN') badgeTrangThai = '<span class="badge badge-warning">Chờ xác nhận</span>';
+                        else if (hd.trangThaiDon === 'DA_XAC_NHAN') badgeTrangThai = '<span class="badge badge-info">Đã xác nhận</span>';
+                        else if (hd.trangThaiDon === 'DANG_GIAO') badgeTrangThai = '<span class="badge badge-primary">Đang giao</span>';
+                        else if (hd.trangThaiDon === 'DA_GIAO') badgeTrangThai = '<span class="badge badge-success">Đã giao</span>';
+                        else if (hd.trangThaiDon === 'DA_HUY') badgeTrangThai = '<span class="badge badge-danger">Đã hủy</span>';
+                        else badgeTrangThai = `<span class="badge badge-info">${hd.trangThaiDon}</span>`;
+
+                        let badgeTT = hd.trangThaiThanhToan === 'DA_THANH_TOAN'
+                            ? '<span class="badge badge-success">Đã thanh toán</span>'
+                            : (hd.trangThaiThanhToan === 'DA_HOAN_TIEN' ? '<span class="badge badge-warning">Đã hoàn tiền</span>' : '<span class="badge badge-danger">Chưa thu</span>');
+
+                        let nutHuy = '';
+                        if (!laKhach && hd.trangThaiDon !== 'DA_GIAO' && hd.trangThaiDon !== 'DA_HUY') {
+                            nutHuy = `<button class="btn btn-danger btn-sm" onclick="huyDonHang('${hd.maHoaDon}')">Hủy (Command)</button>`;
+                        }
+                        const nutDuyetTra = !laKhach && hd.trangThaiDon === 'CHO_KIEM_TRA_TRA_HANG'
+                            ? `<button class="btn btn-success btn-sm" onclick="duyetTraHang('${hd.maHoaDon}')">Duyệt sau khi kiểm tra</button>` : '';
+
+                        if (laKhach) {
+                            const cacMonDaMua = (hd.danhSachChiTiet || []).map(ct =>
+                                `<div>${wmsEscapeHtml(ct.tenSP)} <strong>× ${ct.soLuong}</strong></div>`
+                            ).join('') || 'Không có thông tin sản phẩm';
+                            return `
+                                <tr>
+                                    <td><strong>${hd.maHoaDon}</strong></td>
+                                    <td><small>${hd.ngayTao}</small></td>
+                                    <td>${cacMonDaMua}</td>
+                                    <td><strong style="color:var(--primary);">${dinhDangTien(hd.tongTienThanhToan)}</strong></td>
+                                    <td><span class="badge ${hd.trangThaiDon === 'DA_GIAO' ? 'badge-success' : (hd.trangThaiDon === 'DA_HUY' ? 'badge-danger' : 'badge-info')}">${trangThaiVanChuyen(hd)}</span></td>
+                                    <td><button class="btn btn-outline btn-sm" onclick="moModalIn('${hd.maHoaDon}')">Chi tiết đơn</button>
+                                    ${hd.trangThaiDon === 'DA_GIAO' ? `<button class="btn btn-warning btn-sm" onclick="traHang('${hd.maHoaDon}')">Yêu cầu trả hàng</button>` : ''}</td>
+                                </tr>`;
+                        }
+
+                        return `
+                            <tr>
+                                <td><strong>${hd.maHoaDon}</strong></td>
+                                <td><small>${hd.ngayTao}</small></td>
+                                <td><strong>${wmsEscapeHtml(hd.tenKhachHang)}</strong><br><small style="color:var(--text-muted);">${wmsEscapeHtml(hd.soDienThoai)}</small></td>
+                                <td>${dinhDangTien(hd.tongTienGoc)}</td>
+                                <td><small style="color:var(--success);">-${dinhDangTien(hd.tienGiamGia)}<br>(${hd.loaiGiamGia})</small></td>
+                                <td><small>+${dinhDangTien(hd.tienThue)}<br>(${hd.loaiThue})</small></td>
+                                <td><strong style="color:var(--primary); font-size:1rem;">${dinhDangTien(hd.tongTienThanhToan)}</strong></td>
+                                <td>${badgeTrangThai}</td>
+                                <td>${badgeTT}</td>
+                                <td>
+                                    <div style="display:flex; gap:4px; flex-direction:column;">
+                                        <button class="btn btn-outline btn-sm" onclick="moModalIn('${hd.maHoaDon}')">📄 Chi tiết</button>
+                                        ${nutHuy}
+                                        ${nutDuyetTra}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="${soCot}" style="text-align: center;">${laKhach ? 'Bạn chưa có đơn hàng nào!' : 'Chưa có hóa đơn nào trong hệ thống!'}</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function moModalIn(maHD) {
+            const hd = toanBoHoaDon.find(x => x.maHoaDon === maHD);
+            if (!hd) return;
+
+            document.getElementById('in-mahd').innerText = hd.maHoaDon;
+            document.getElementById('in-ngay').innerText = hd.ngayTao;
+            document.getElementById('in-tenkh').innerText = hd.tenKhachHang;
+            document.getElementById('in-sdt').innerText = hd.soDienThoai;
+            document.getElementById('in-diachi').innerText = hd.diaChiGiaoHang;
+            document.getElementById('in-pttt').innerText = hd.phuongThucThanhToan;
+
+            const tbody = document.getElementById('in-danhsach-ct');
+            tbody.innerHTML = hd.danhSachChiTiet.map(ct => `
+                <tr>
+                    <td><strong>${wmsEscapeHtml(ct.tenSP)}</strong> (${wmsEscapeHtml(ct.maSP)})</td>
+                    <td>${ct.soLuong}</td>
+                    <td>${dinhDangTien(ct.donGia)}</td>
+                    <td style="text-align: right;"><strong>${dinhDangTien(ct.thanhTien)}</strong></td>
+                </tr>
+            `).join('');
+
+            document.getElementById('in-tiengoc').innerText = dinhDangTien(hd.tongTienGoc);
+            document.getElementById('in-loaigg').innerText = hd.loaiGiamGia;
+            document.getElementById('in-tiengiam').innerText = '-' + dinhDangTien(hd.tienGiamGia);
+            document.getElementById('in-loaithue').innerText = hd.loaiThue;
+            document.getElementById('in-tienthue').innerText = '+' + dinhDangTien(hd.tienThue);
+            document.getElementById('in-tongtien').innerText = dinhDangTien(hd.tongTienThanhToan);
+
+            document.getElementById('modal-in-hoadon').style.display = 'flex';
+        }
+
+        function dongModalIn() {
+            document.getElementById('modal-in-hoadon').style.display = 'none';
+        }
+
+        async function traHang(maHD) {
+            if (!confirm('Gui yeu cau tra hang; nhan vien se kiem tra truoc khi hoan tien va nhap lai kho.')) return;
+            try {
+                const res = await fetch('/api/don-hang/tra-hang', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Auth.layToken()}` },
+                    body: JSON.stringify({ maHoaDon: maHD })
+                });
+                const data = await res.json();
+                alert(data.thongBao);
+                if (data.thanhCong) taiDanhSachHoaDon();
+            } catch (e) { alert('Không thể gửi yêu cầu trả hàng.'); }
+        }
+
+        async function duyetTraHang(maHD) {
+            if (!confirm('Chỉ xác nhận sau khi đã nhận và kiểm tra thực tế hàng trả. Duyệt sẽ hoàn tiền và cập nhật tồn kho.')) return;
+            try {
+                const res = await fetch('/api/don-hang/duyet-tra-hang', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Auth.layToken()}` },
+                    body: JSON.stringify({ maHoaDon: maHD })
+                });
+                const data = await res.json();
+                alert(data.thongBao);
+                if (data.thanhCong) taiDanhSachHoaDon();
+            } catch (e) { alert('Không thể duyệt yêu cầu trả hàng.'); }
+        }
+
+        async function huyDonHang(maHD) {
+            if (!confirm(`Xác nhận hủy đơn hàng ${maHD}? (Lệnh hủy được thực hiện qua Command Pattern để hoàn lại kho đúng quy trình)`)) return;
+            try {
+                const res = await fetch('/api/don-hang/huy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maHoaDon: maHD })
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    taiDanhSachHoaDon();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        async function hoanTacLenhCommand() {
+            if (!confirm('Bạn có muốn hoàn tác (Undo) thao tác hủy đơn gần nhất?')) return;
+            try {
+                const res = await fetch('/api/don-hang/hoan-tac', {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    taiDanhSachHoaDon();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cauHinhTrangDonHang();
+            taiDanhSachHoaDon();
+        });
+    </script>
+</body>
+</html>
+
