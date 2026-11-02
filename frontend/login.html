@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ thống quản lý kho & bán hàng</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="justify-content: center; align-items: center; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);">
+
+    <div class="card" style="width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); margin: 2rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2.2rem;">📦</div>
+            <h2 style="color: var(--primary-hover); font-weight: 700; margin-top: 0.5rem;">Đăng nhập hệ thống</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Hệ thống quản lý kho hàng & bán hàng (WMS)</p>
+        </div>
+
+        <form id="form-login" onsubmit="xuLyDangNhap(event)">
+            <div class="form-group">
+                <label class="form-label">Tên đăng nhập:</label>
+                <input type="text" id="username" class="form-control" required placeholder="Nhập tên đăng nhập">
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label class="form-label">Mật khẩu:</label>
+                    <a href="forgot-password.html" style="font-size: 0.8rem; color: var(--primary); text-decoration: none;">Quên mật khẩu?</a>
+                </div>
+                <input type="password" id="password" class="form-control" required placeholder="Nhập mật khẩu">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; margin-top: 0.5rem;">
+                🚀 Đăng nhập
+            </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border-color); text-align: center;">
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+                Chưa có tài khoản? <a href="register.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Đăng ký ngay</a>
+            </p>
+        </div>
+
+        <!-- Tai khoan thu nghiem nhanh danh cho cham bai BTL -->
+        <div style="margin-top: 1.5rem; background: var(--primary-light); padding: 12px; border-radius: var(--radius-sm); font-size: 0.85rem;">
+            <strong style="color: var(--primary-hover); display: block; margin-bottom: 6px;">⚡ Tài khoản thử nghiệm (điền nhanh):</strong>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="dienTaiKhoan('admin', 'admin123')">🔑 Admin</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="dienTaiKhoan('thukho', 'kho123')">📦 Thủ kho</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="dienTaiKhoan('banhang', 'banhang123')">💼 Bán hàng</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="dienTaiKhoan('khachhang', 'khach123')">🛒 Khách hàng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        function dienTaiKhoan(u, p) {
+            document.getElementById('username').value = u;
+            document.getElementById('password').value = p;
+        }
+
+        async function xuLyDangNhap(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/dang-nhap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenDangNhap: u, matKhau: p })
+                });
+
+                const data = await res.json();
+                if (data.thanhCong) {
+                    Auth.luuPhienDangNhap(data.nguoiDung, data.token);
+                    
+                    // Dieu huong theo vai tro
+                    if (data.nguoiDung.vaiTro === 'QUAN_LY_KHO') {
+                        window.location.href = 'kho.html';
+                    } else if (data.nguoiDung.vaiTro === 'BAN_HANG') {
+                        window.location.href = 'banhang.html';
+                    } else if (data.nguoiDung.vaiTro === 'ADMIN') {
+                        window.location.href = 'baocao.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Không kết nối được backend tại localhost:8080. Hãy chạy WMS/run.bat trước khi đăng nhập.');
+            }
+        }
+    </script>
+</body>
+</html>
+

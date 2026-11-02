@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực OTP - WMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="justify-content: center; align-items: center; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);">
+
+    <div class="card" style="width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); margin: 2rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2.2rem;">🔐</div>
+            <h2 style="color: var(--primary-hover); font-weight: 700; margin-top: 0.5rem;">Xác thực mã OTP</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Nhập mã 6 chữ số được gửi tới email của bạn</p>
+        </div>
+
+        <form id="form-otp" onsubmit="xuLyXacThucOTP(event)">
+            <div class="form-group">
+                <label class="form-label">Email tài khoản:</label>
+                <input type="email" id="otp-email" class="form-control" required readonly>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mã OTP (6 chữ số):</label>
+                <input type="text" id="otp-code" class="form-control" required maxlength="6" style="font-size: 1.3rem; letter-spacing: 5px; text-align: center;" placeholder="______">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; margin-top: 0.5rem;">
+                ✅ Kích hoạt tài khoản
+            </button>
+        </form>
+        <div style="margin-top: 1.2rem; background: var(--primary-light); padding: 12px; border-radius: var(--radius-sm); text-align: center;">
+            <p>Chế độ OTP demo: mã được in trong console máy chủ.</p>
+            <button type="button" class="btn btn-outline btn-sm" onclick="layMaOTPTuServer()">Xem mã OTP</button>
+            <div id="otp-demo-result" style="margin-top: 6px; font-weight: 700; color: var(--primary);"></div>
+        </div>
+
+        <div style="margin-top: 1.2rem; text-align: center;">
+            <a href="login.html" style="color: var(--primary); font-size: 0.9rem; text-decoration: none;">← Quay lại đăng nhập</a>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailParam = urlParams.get('email');
+        if (emailParam) {
+            document.getElementById('otp-email').value = emailParam;
+        }
+        async function layMaOTPTuServer() {
+            const email = document.getElementById('otp-email').value;
+            const res = await fetch(`/api/lay-otp-hien-tai?email=${encodeURIComponent(email)}`);
+            const data = await res.json();
+            document.getElementById('otp-demo-result').innerText = data.otp ? `Mã OTP demo: ${data.otp}` : 'Chưa có OTP hoặc mã đã hết hạn.';
+            if (data.otp) document.getElementById('otp-code').value = data.otp;
+        }
+
+        async function xuLyXacThucOTP(e) {
+            e.preventDefault();
+            const email = document.getElementById('otp-email').value;
+            const otp = document.getElementById('otp-code').value;
+
+            try {
+                const res = await fetch('/api/xac-thuc-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, otp: otp })
+                });
+
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    window.location.href = 'login.html';
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+    </script>
+</body>
+</html>
+
