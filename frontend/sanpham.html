@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý sản phẩm (OOP đa hình) - WMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <a href="index.html" class="nav-brand">
+            📦 WMS
+        </a>
+        <ul class="nav-menu" id="nav-menu-container"></ul>
+        <div class="nav-auth" id="nav-auth-container"></div>
+    </header>
+
+    <div class="container">
+        <!-- Banner Observer Alert -->
+        <div id="observer-alert-banner" style="display: none;"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">📦 Quản lý danh mục hàng hóa & sản phẩm</h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">
+                        Mô hình OOP: Lớp cơ sở <code>SanPham</code> &bull; 3 Lớp dẫn xuất: <code>SanPhamThuong</code>, <code>SanPhamHanSuDung</code> (Date/FEFO), <code>SanPhamTheoCan</code> (Kg/Hao hụt)
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="moModalThemSanPham()">
+                    ➕ Thêm sản phẩm mới
+                </button>
+            </div>
+
+            <!-- Bang danh sach san pham -->
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mã SP</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Loại sản phẩm (OOP)</th>
+                            <th>ĐVT</th>
+                            <th>Giá nhập</th>
+                            <th>Giá bán</th>
+                            <th>Tồn kho</th>
+                            <th>Vị trí kho</th>
+                            <th>Đặc tính kế thừa</th>
+                            <th style="width: 130px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bang-san-pham-body">
+                        <tr><td colspan="10" style="text-align: center;">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Them / Sua San Pham -->
+    <div id="modal-san-pham" class="modal-overlay">
+        <div class="modal-content">
+            <div class="card-header">
+                <h3 class="card-title" id="modal-sp-title">➕ Thêm sản phẩm mới</h3>
+                <button class="btn btn-outline btn-sm" onclick="dongModalSanPham()">✕</button>
+            </div>
+
+            <form id="form-san-pham" onsubmit="xuLyLuuSanPham(event)">
+                <input type="hidden" id="sp-is-edit" value="0">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Mã SP: *</label>
+                        <input type="text" id="sp-ma" class="form-control" required placeholder="SP07">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tên sản phẩm: *</label>
+                        <input type="text" id="sp-ten" class="form-control" required placeholder="Tên sản phẩm">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Loại sản phẩm (Đa hình OOP): *</label>
+                        <select id="sp-loai" class="form-control" onchange="thayDoiLoaiSanPham(this.value)">
+                            <option value="THUONG">Hàng thông thường (SanPhamThuong)</option>
+                            <option value="HAN_SU_DUNG">Có hạn sử dụng (SanPhamHanSuDung)</option>
+                            <option value="THEO_CAN">Bán theo cân (SanPhamTheoCan)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Đơn vị tính: *</label>
+                        <input type="text" id="sp-dvt" class="form-control" required placeholder="Cái, Hộp, Kg...">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Giá nhập (₫):</label>
+                        <input type="number" id="sp-gianhap" class="form-control" required min="0" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Giá bán (₫):</label>
+                        <input type="number" id="sp-giaban" class="form-control" required min="0" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tồn kho ban đầu:</label>
+                        <input type="number" id="sp-tonkho" class="form-control" required min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Tồn tối thiểu (Min):</label>
+                        <input type="number" id="sp-min" class="form-control" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tồn tối đa (max):</label>
+                        <input type="number" id="sp-max" class="form-control" value="500">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vị trí trong kho:</label>
+                        <input type="text" id="sp-vitri" class="form-control" value="Khu A - Ke 01">
+                    </div>
+                </div>
+
+                <!-- Truong mo rong cho SanPhamHanSuDung -->
+                <div id="group-hsd" style="display: none; background: #fffbeb; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid #fde68a;">
+                    <strong style="color: #92400e; font-size: 0.85rem; display: block; margin-bottom: 6px;">📅 Thuộc tính SanPhamHanSuDung (FEFO/date):</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Ngày sản xuất:</label>
+                            <input type="date" id="sp-nsx" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Hạn sử dụng: *</label>
+                            <input type="date" id="sp-hsd" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Truong mo rong cho SanPhamTheoCan -->
+                <div id="group-theocan" style="display: none; background: #eff6ff; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid #bfdbfe;">
+                    <strong style="color: #1e40af; font-size: 0.85rem; display: block; margin-bottom: 6px;">⚖️ Thuộc tính SanPhamTheoCan (khối lượng & hao hụt):</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Trọng lượng gói/túi (Kg):</label>
+                            <input type="number" id="sp-trongluong" class="form-control" step="0.1" value="1.0">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Hệ số hao hụt tự nhiên (ví dụ 0.02 = 2%):</label>
+                            <input type="number" id="sp-haohut" class="form-control" step="0.01" value="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mô tả chi tiết:</label>
+                    <textarea id="sp-mota" class="form-control" rows="2" placeholder="Ghi chú về nguồn gốc, quy cách bảo quản..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+                    <button type="button" class="btn btn-outline" onclick="dongModalSanPham()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu sản phẩm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Kiem tra quyen
+        Auth.kiemTraQuyen(['ADMIN', 'QUAN_LY_KHO', 'BAN_HANG']);
+
+        let danhSachSP = [];
+
+        async function taiDanhSachSanPham() {
+            try {
+                const res = await fetch('/api/san-pham');
+                const data = await res.json();
+                if (data.thanhCong) {
+                    danhSachSP = data.danhSach;
+                    hienThiBangSanPham(danhSachSP);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function hienThiBangSanPham(list) {
+            const tbody = document.getElementById('bang-san-pham-body');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Chưa có sản phẩm nào!</td></tr>';
+                return;
+            }
+
+            const danhSachTheoMa = [...list].sort((a, b) =>
+                String(a.maSP).localeCompare(String(b.maSP), 'vi', { numeric: true, sensitivity: 'base' })
+            );
+
+            tbody.innerHTML = danhSachTheoMa.map(sp => {
+                let badgeLoai = '';
+                let dacTinh = '';
+
+                if (sp.loaiSP === 'HAN_SU_DUNG') {
+                    badgeLoai = '<span class="badge badge-warning">Hạn sử dụng</span>';
+                    dacTinh = `HSD: <strong>${sp.hanSuDung || 'N/A'}</strong> (Còn ${sp.ngayConLai} ngày)`;
+                    if (sp.sapHetHan) dacTinh += ' <span style="color:var(--danger); font-weight:700;">⚠️ Cận date!</span>';
+                } else if (sp.loaiSP === 'THEO_CAN') {
+                    badgeLoai = '<span class="badge badge-info">Theo cân</span>';
+                    dacTinh = `Hao hụt: ${(sp.heSoHaoHut*100).toFixed(0)}% | Gói ${sp.trongLuong}kg`;
+                } else {
+                    badgeLoai = '<span class="badge badge-primary">Thông thường</span>';
+                    dacTinh = 'Hàng tiêu chuẩn';
+                }
+
+                let tonStyle = sp.canhBaoTon ? 'color: var(--danger); font-weight: 700;' : '';
+
+                return `
+                    <tr>
+                        <td><strong>${sp.maSP}</strong></td>
+                        <td><strong>${sp.tenSP}</strong><br><small style="color:var(--text-muted);">${sp.moTa || ''}</small></td>
+                        <td>${badgeLoai}</td>
+                        <td>${sp.donViTinh}</td>
+                        <td>${dinhDangTien(sp.giaNhap)}</td>
+                        <td><strong style="color:var(--primary);">${dinhDangTien(sp.giaBan)}</strong></td>
+                        <td style="${tonStyle}">${sp.soLuongTon} ${sp.canhBaoTon ? '⚠️' : ''}</td>
+                        <td><span class="badge badge-info">${sp.viTriKho}</span></td>
+                        <td><small>${dacTinh}</small></td>
+                        <td>
+                            <button class="btn btn-outline btn-sm" onclick="suaSanPham('${sp.maSP}')">Sửa</button>
+                            <button class="btn btn-danger btn-sm" onclick="xoaSanPham('${sp.maSP}')">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function thayDoiLoaiSanPham(loai) {
+            document.getElementById('group-hsd').style.display = (loai === 'HAN_SU_DUNG') ? 'block' : 'none';
+            document.getElementById('group-theocan').style.display = (loai === 'THEO_CAN') ? 'block' : 'none';
+        }
+
+        function moModalThemSanPham() {
+            document.getElementById('form-san-pham').reset();
+            document.getElementById('sp-is-edit').value = '0';
+            document.getElementById('sp-ma').readOnly = false;
+            document.getElementById('modal-sp-title').innerText = '➕ Thêm sản phẩm mới (OOP)';
+            thayDoiLoaiSanPham('THUONG');
+            document.getElementById('modal-san-pham').style.display = 'flex';
+        }
+
+        function dongModalSanPham() {
+            document.getElementById('modal-san-pham').style.display = 'none';
+        }
+
+        function suaSanPham(maSP) {
+            const sp = danhSachSP.find(x => x.maSP === maSP);
+            if (!sp) return;
+
+            document.getElementById('sp-is-edit').value = '1';
+            document.getElementById('sp-ma').value = sp.maSP;
+            document.getElementById('sp-ma').readOnly = true;
+            document.getElementById('sp-ten').value = sp.tenSP;
+            document.getElementById('sp-loai').value = sp.loaiSP;
+            document.getElementById('sp-dvt').value = sp.donViTinh;
+            document.getElementById('sp-gianhap').value = sp.giaNhap;
+            document.getElementById('sp-giaban').value = sp.giaBan;
+            document.getElementById('sp-tonkho').value = sp.soLuongTon;
+            document.getElementById('sp-min').value = sp.tonToiThieu;
+            document.getElementById('sp-max').value = sp.tonToiDa;
+            document.getElementById('sp-vitri').value = sp.viTriKho;
+            document.getElementById('sp-mota').value = sp.moTa || '';
+
+            if (sp.loaiSP === 'HAN_SU_DUNG') {
+                document.getElementById('sp-nsx').value = sp.ngaySanXuat || '';
+                document.getElementById('sp-hsd').value = sp.hanSuDung || '';
+            } else if (sp.loaiSP === 'THEO_CAN') {
+                document.getElementById('sp-trongluong').value = sp.trongLuong || 1.0;
+                document.getElementById('sp-haohut').value = sp.heSoHaoHut || 0.01;
+            }
+
+            thayDoiLoaiSanPham(sp.loaiSP);
+            document.getElementById('modal-sp-title').innerText = '✏️ Chỉnh sửa sản phẩm: ' + sp.maSP;
+            document.getElementById('modal-san-pham').style.display = 'flex';
+        }
+
+        async function xuLyLuuSanPham(e) {
+            e.preventDefault();
+            const isEdit = document.getElementById('sp-is-edit').value === '1';
+            const endpoint = isEdit ? '/api/san-pham/sua' : '/api/san-pham/them';
+
+            const payload = {
+                maSP: document.getElementById('sp-ma').value,
+                tenSP: document.getElementById('sp-ten').value,
+                loaiSP: document.getElementById('sp-loai').value,
+                donViTinh: document.getElementById('sp-dvt').value,
+                giaNhap: Number(document.getElementById('sp-gianhap').value),
+                giaBan: Number(document.getElementById('sp-giaban').value),
+                soLuongTon: Number(document.getElementById('sp-tonkho').value),
+                tonToiThieu: Number(document.getElementById('sp-min').value),
+                tonToiDa: Number(document.getElementById('sp-max').value),
+                viTriKho: document.getElementById('sp-vitri').value,
+                moTa: document.getElementById('sp-mota').value,
+                ngaySanXuat: document.getElementById('sp-nsx').value,
+                hanSuDung: document.getElementById('sp-hsd').value,
+                trongLuong: Number(document.getElementById('sp-trongluong').value || 1.0),
+                heSoHaoHut: Number(document.getElementById('sp-haohut').value || 0.0)
+            };
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    dongModalSanPham();
+                    taiDanhSachSanPham();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        async function xoaSanPham(maSP) {
+            if (!confirm(`Bạn có chắc muốn xóa sản phẩm ${maSP}?`)) return;
+            try {
+                const res = await fetch('/api/san-pham/xoa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maSP: maSP })
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    taiDanhSachSanPham();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            taiDanhSachSanPham();
+            window.setInterval(() => {
+                if (!document.hidden) taiDanhSachSanPham();
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
+
