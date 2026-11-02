@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo thống kê & quản trị - WMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <a href="index.html" class="nav-brand">
+            📦 WMS
+        </a>
+        <ul class="nav-menu" id="nav-menu-container"></ul>
+        <div class="nav-auth" id="nav-auth-container"></div>
+    </header>
+
+    <div class="container">
+        <!-- Banner Observer Alert -->
+        <div id="observer-alert-banner" style="display: none;"></div>
+        <div id="report-load-error" class="card" style="display:none;border-left:5px solid var(--danger);color:var(--danger);"></div>
+
+        <div id="pending-purchase-alert" class="card" style="border-left:5px solid var(--warning);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h2 class="card-title" id="phieu-nhap-cho-duyet">Phiếu nhập kho chờ duyệt</h2>
+                    <p id="pending-purchase-message" style="color:var(--text-muted); margin-top:4px;"></p>
+                </div>
+                <a href="kho.html" class="btn btn-primary">Mở tồn kho & duyệt phiếu</a>
+            </div>
+            <div id="pending-purchase-list" class="table-responsive" style="margin-top:1rem;"></div>
+        </div>
+
+        <!-- Thong ke tong quan -->
+        <div class="grid-cols-4">
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#e0f2fe; color:var(--primary);">💰</div>
+                <div>
+                    <div class="stat-value" id="bc-doanhthu">0 ₫</div>
+                    <div class="stat-label">Tổng doanh thu đã thu</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#d1fae5; color:var(--success);">📦</div>
+                <div>
+                    <div class="stat-value" id="bc-giatriton">0 ₫</div>
+                    <div class="stat-label">Tổng giá trị tồn kho</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#fef3c7; color:var(--warning);">🛒</div>
+                <div>
+                    <div class="stat-value" id="bc-tongdon">0</div>
+                    <div class="stat-label">Đơn hàng bán (<span id="bc-doncho" style="color:var(--warning); font-weight:700;">0</span> chờ xác nhận)</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#fee2e2; color:var(--danger);">⚠️</div>
+                <div>
+                    <div class="stat-value" id="bc-canhbao" style="color:var(--danger);">0</div>
+                    <div class="stat-label">Sản phẩm cần chú ý (Observer)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab phan he quan tri -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">👥 Quản lý người dùng & phân quyền hệ thống</h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">
+                        Phân cấp OOP: <code>QuanTriVien</code> (Admin) &bull; <code>NguoiQuanLyKho</code> &bull; <code>NhanVienBanHang</code> &bull; <code>KhachHang</code>
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="moModalThemNguoiDung()">➕ Thêm tài khoản mới</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mã ND</th>
+                            <th>Tên đăng nhập</th>
+                            <th>Họ và tên</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Vai trò (OOP)</th>
+                            <th>Trạng thái</th>
+                            <th style="width: 120px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bang-nguoi-dung-body">
+                        <tr><td colspan="8" style="text-align: center;">Đang tải danh sách người dùng...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Them / Sua Nguoi Dung -->
+    <div id="modal-nguoi-dung" class="modal-overlay">
+        <div class="modal-content">
+            <div class="card-header">
+                <h3 class="card-title" id="modal-nd-title">➕ Thêm tài khoản mới</h3>
+                <button class="btn btn-outline btn-sm" onclick="dongModalNguoiDung()">✕</button>
+            </div>
+            <form id="form-nguoi-dung" onsubmit="xuLyLuuNguoiDung(event)">
+                <input type="hidden" id="nd-is-edit" value="0">
+                <input type="hidden" id="nd-ma" value="">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Tên đăng nhập: *</label>
+                        <input type="text" id="nd-user" class="form-control" required placeholder="nhanvienkho2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mật khẩu: *</label>
+                        <input type="password" id="nd-pass" class="form-control" placeholder="Để trống nếu không đổi">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Họ và tên: *</label>
+                    <input type="text" id="nd-hoten" class="form-control" required placeholder="Nguyễn Văn A">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Email: *</label>
+                        <input type="email" id="nd-email" class="form-control" required placeholder="a@wms.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Số điện thoại:</label>
+                        <input type="tel" id="nd-sdt" class="form-control" placeholder="0912345678">
+                    </div>
+                </div>
+
+                <div class="form-group" id="group-vaitro">
+                    <label class="form-label">Vai trò (Phân quyền OOP):</label>
+                    <select id="nd-vaitro" class="form-control">
+                        <option value="ADMIN">Quản trị viên (QuanTriVien - toàn quyền)</option>
+                        <option value="QUAN_LY_KHO">Người quản lý kho (NguoiQuanLyKho)</option>
+                        <option value="BAN_HANG">Nhân viên bán hàng (NhanVienBanHang)</option>
+                        <option value="KHACH_HANG">Khách hàng (KhachHang)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+                    <button type="button" class="btn btn-outline" onclick="dongModalNguoiDung()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        Auth.kiemTraQuyen(['ADMIN']);
+
+        let danhSachND = [];
+
+        async function taiThongBaoPhieuNhap() {
+            const alertBox = document.getElementById('pending-purchase-alert');
+            const message = document.getElementById('pending-purchase-message');
+            try {
+                const res = await fetch('/api/kho/nhap');
+                const data = await res.json();
+                if (!data.thanhCong || !Array.isArray(data.danhSach)) return;
+                const danhSachCoTrangThai = data.danhSach.every(phieu => typeof phieu.trangThai === 'string');
+                if (!danhSachCoTrangThai && data.danhSach.length > 0) {
+                    message.innerText = 'Backend hiện tại chưa hỗ trợ trạng thái chờ duyệt. Hãy dừng máy chủ, chạy build.bat rồi khởi động lại bằng run.bat.';
+                    document.getElementById('pending-purchase-list').innerHTML = '';
+                    return;
+                }
+                const choDuyet = data.danhSach.filter(phieu => phieu.trangThai === 'CHO_DUYET');
+                if (choDuyet.length === 0) {
+                    message.innerText = 'Hiện không có phiếu nhập nào đang chờ duyệt.';
+                    document.getElementById('pending-purchase-list').innerHTML = '';
+                    return;
+                }
+                message.innerText = `Thủ kho đã gửi ${choDuyet.length} phiếu nhập. Hàng chỉ được cộng vào tồn kho sau khi bạn duyệt.`;
+                document.getElementById('pending-purchase-list').innerHTML = `
+                    <table class="table">
+                        <thead><tr><th>Mã phiếu</th><th>Nhà cung cấp</th><th>Người lập</th><th>Mặt hàng</th><th>Tổng tiền</th><th></th></tr></thead>
+                        <tbody>${choDuyet.map(phieu => `
+                            <tr>
+                                <td><strong>${phieu.maPhieu}</strong></td>
+                                <td>${phieu.nhaCungCap}</td>
+                                <td>${phieu.nguoiLapPhieu}</td>
+                                <td>${(phieu.danhSachChiTiet || []).map(ct => `${ct.tenSP} × ${ct.soLuong}`).join('<br>')}</td>
+                                <td>${dinhDangTien(phieu.tongTien)}</td>
+                                <td><button class="btn btn-primary btn-sm" onclick="duyetPhieuNhapAdmin('${phieu.maPhieu}')">Duyệt phiếu</button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (error) {
+                console.error('Không tải được thông báo phiếu nhập:', error);
+                message.innerText = 'Không tải được danh sách phiếu nhập. Hãy kiểm tra máy chủ đang chạy.';
+            }
+        }
+
+        async function duyetPhieuNhapAdmin(maPhieu) {
+            if (!confirm(`Duyệt phiếu ${maPhieu} và cộng hàng vào tồn kho?`)) return;
+            try {
+                const res = await fetch('/api/kho/nhap/duyet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${Auth.layToken()}`
+                    },
+                    body: JSON.stringify({ maPhieu })
+                });
+                const data = await res.json();
+                alert(data.thongBao || 'Không thể duyệt phiếu. Hãy kiểm tra phiên đăng nhập và phiên bản backend.');
+                if (data.thanhCong) {
+                    taiThongBaoPhieuNhap();
+                    taiBaoCao();
+                }
+            } catch (error) {
+                alert('Không kết nối được backend. Hãy kiểm tra máy chủ và đăng nhập admin.');
+            }
+        }
+
+        async function taiBaoCao() {
+            try {
+                const res = await fetch('/api/bao-cao');
+                const data = await res.json();
+                const errorBox = document.getElementById('report-load-error');
+                const cacTruongCanCo = ['tongDoanhThu', 'tongGiaTriTon', 'tongDonHang', 'donChoXacNhan', 'soLuongCanhBao'];
+                const schemaHopLe = res.ok && cacTruongCanCo.every(k => Number.isFinite(Number(data[k])) && data[k] !== undefined);
+                if (!schemaHopLe) {
+                    errorBox.style.display = 'block';
+                    errorBox.innerText = res.status === 401
+                        ? 'Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.'
+                        : 'Dữ liệu báo cáo chưa đồng bộ với backend. Hãy đóng máy chủ, chạy build.bat rồi run.bat.';
+                    cacTruongCanCo.forEach(k => {
+                        const id = { tongDoanhThu: 'bc-doanhthu', tongGiaTriTon: 'bc-giatriton', tongDonHang: 'bc-tongdon', donChoXacNhan: 'bc-doncho', soLuongCanhBao: 'bc-canhbao' }[k];
+                        document.getElementById(id).innerText = '--';
+                    });
+                    return;
+                }
+                errorBox.style.display = 'none';
+                document.getElementById('bc-doanhthu').innerText = dinhDangTien(data.tongDoanhThu);
+                document.getElementById('bc-giatriton').innerText = dinhDangTien(data.tongGiaTriTon);
+                document.getElementById('bc-tongdon').innerText = data.tongDonHang;
+                document.getElementById('bc-doncho').innerText = data.donChoXacNhan;
+                document.getElementById('bc-canhbao').innerText = data.soLuongCanhBao;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function taiDanhSachNguoiDung() {
+            try {
+                const res = await fetch('/api/nguoi-dung');
+                const data = await res.json();
+                const tbody = document.getElementById('bang-nguoi-dung-body');
+                if (data.thanhCong && data.danhSach.length > 0) {
+                    danhSachND = data.danhSach;
+                    tbody.innerHTML = danhSachND.map(nd => {
+                        let badgeRole = '';
+                        if (nd.vaiTro === 'ADMIN') badgeRole = '<span class="badge badge-danger">Admin</span>';
+                        else if (nd.vaiTro === 'QUAN_LY_KHO') badgeRole = '<span class="badge badge-warning">Quản lý kho</span>';
+                        else if (nd.vaiTro === 'BAN_HANG') badgeRole = '<span class="badge badge-primary">Bán hàng</span>';
+                        else badgeRole = '<span class="badge badge-success">Khách hàng</span>';
+
+                        return `
+                            <tr>
+                                <td><strong>${nd.maNguoiDung}</strong></td>
+                                <td><strong>${nd.tenDangNhap}</strong></td>
+                                <td>${nd.hoTen}</td>
+                                <td>${nd.email}</td>
+                                <td>${nd.soDienThoai || '-'}</td>
+                                <td>${badgeRole}</td>
+                                <td><span class="badge badge-info">${nd.trangThai}</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm" onclick="suaNguoiDung('${nd.maNguoiDung}')">Sửa</button>
+                                    ${nd.vaiTro !== 'ADMIN' && (nd.trangThai === 'KICH_HOAT' || nd.trangThai === 'BI_KHOA') ? `<button class="btn btn-warning btn-sm" onclick="doiTrangThaiNguoiDung('${nd.maNguoiDung}','${nd.trangThai === 'KICH_HOAT' ? 'BI_KHOA' : 'KICH_HOAT'}')">${nd.trangThai === 'KICH_HOAT' ? 'Khóa' : 'Mở khóa'}</button>` : ''}
+                                    <button class="btn btn-danger btn-sm" onclick="xoaNguoiDung('${nd.maNguoiDung}')">Xóa</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else if (data.thanhCong) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Chưa có tài khoản nào.</td></tr>';
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);">${data.thongBao || 'Không tải được danh sách người dùng.'}</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+                const tbody = document.getElementById('bang-nguoi-dung-body');
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Không kết nối được backend.</td></tr>';
+            }
+        }
+
+        function moModalThemNguoiDung() {
+            document.getElementById('form-nguoi-dung').reset();
+            document.getElementById('nd-is-edit').value = '0';
+            document.getElementById('nd-user').readOnly = false;
+            document.getElementById('group-vaitro').style.display = 'block';
+            document.getElementById('modal-nd-title').innerText = '➕ Thêm tài khoản mới';
+            document.getElementById('modal-nguoi-dung').style.display = 'flex';
+        }
+
+        function dongModalNguoiDung() {
+            document.getElementById('modal-nguoi-dung').style.display = 'none';
+        }
+
+        function suaNguoiDung(maND) {
+            const nd = danhSachND.find(x => x.maNguoiDung === maND);
+            if (!nd) return;
+
+            document.getElementById('nd-is-edit').value = '1';
+            document.getElementById('nd-ma').value = nd.maNguoiDung;
+            document.getElementById('nd-user').value = nd.tenDangNhap;
+            document.getElementById('nd-user').readOnly = true;
+            document.getElementById('nd-hoten').value = nd.hoTen;
+            document.getElementById('nd-email').value = nd.email;
+            document.getElementById('nd-sdt').value = nd.soDienThoai || '';
+            document.getElementById('nd-pass').value = '';
+            document.getElementById('group-vaitro').style.display = 'none';
+
+            document.getElementById('modal-nd-title').innerText = '✏️ Sửa tài khoản: ' + nd.tenDangNhap;
+            document.getElementById('modal-nguoi-dung').style.display = 'flex';
+        }
+
+        async function xuLyLuuNguoiDung(e) {
+            e.preventDefault();
+            const isEdit = document.getElementById('nd-is-edit').value === '1';
+            const endpoint = isEdit ? '/api/nguoi-dung/sua' : '/api/nguoi-dung/them';
+
+            const payload = {
+                maNguoiDung: document.getElementById('nd-ma').value,
+                tenDangNhap: document.getElementById('nd-user').value,
+                matKhau: document.getElementById('nd-pass').value,
+                hoTen: document.getElementById('nd-hoten').value,
+                email: document.getElementById('nd-email').value,
+                soDienThoai: document.getElementById('nd-sdt').value,
+                vaiTro: document.getElementById('nd-vaitro').value
+            };
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    dongModalNguoiDung();
+                    taiDanhSachNguoiDung();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        async function xoaNguoiDung(maND) {
+            if (!confirm(`Bạn có chắc muốn xóa tài khoản ${maND}?`)) return;
+            try {
+                const res = await fetch('/api/nguoi-dung/xoa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maNguoiDung: maND })
+                });
+                const data = await res.json();
+                if (data.thanhCong) {
+                    alert('🎉 ' + data.thongBao);
+                    taiDanhSachNguoiDung();
+                } else {
+                    alert('❌ ' + data.thongBao);
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+            }
+        }
+
+        async function doiTrangThaiNguoiDung(maNguoiDung, trangThai) {
+            const res = await fetch('/api/nguoi-dung/trang-thai', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maNguoiDung, trangThai })
+            });
+            const data = await res.json(); alert(data.thongBao);
+            if (data.thanhCong) taiDanhSachNguoiDung();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            taiThongBaoPhieuNhap();
+            taiBaoCao();
+            taiDanhSachNguoiDung();
+        });
+    </script>
+</body>
+</html>
+
